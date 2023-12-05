@@ -30,13 +30,10 @@ _|_|_
 _|_|_
  | |
 =end
-
-HUMAN_IS_CHOOSING = true
+human_is_choosing = true
 
 PIECE_X = "_X_".freeze
-PIECE_O = "_Y_".freeze
-
-PIECE_CURRENT = PIECE_X
+PIECE_O = "_0_".freeze
 
 BOARD_COORDINATE_PLANE =
   [ [1,3], [2,3], [3,3],
@@ -61,13 +58,11 @@ BOARD_DISPLAY_CURRENT = {
   "row1" => ROW1.dup
 }.dup
 
-#p BOARD_DISPLAY_CURRENT.values
-
-# puts "hello"
-# puts "hello"
-#pp BOARD_DISPLAY_FUN
-
-
+HORIZONTAL_WIN_INITIAL = [
+  [[1,3], [2,3], [3,3]].freeze,
+  [[1,2], [2,2], [3,2]].freeze,
+  [[1,1], [2,1], [3,1]].freeze,
+].freeze
 
 HORIZONTAL_WIN = [
   [[1,3], [2,3], [3,3]],
@@ -75,7 +70,11 @@ HORIZONTAL_WIN = [
   [[1,1], [2,1], [3,1]],
 ]
 
-#win if all the values in any array are equal
+VERTICAL_WIN_INITIAL = [
+  [[1,1], [1,2], [1,3]].freeze,
+  [[2,1], [2,2], [2,3]].freeze,
+  [[3,1], [3,2], [3,3]].freeze
+].freeze
 
 VERTICAL_WIN = [
   [[1,1], [1,2], [1,3]],
@@ -83,25 +82,19 @@ VERTICAL_WIN = [
   [[3,1], [3,2], [3,3]]
 ]
 
-#win if all the values in any array are equal
+DIAGONAL_WIN_INITIAL = [
+  [[1,1], [2,2], [3,3]].freeze,
+  [[1,3], [2,2], [3,1]].freeze
+].freeze
 
 DIAGONAL_WIN = [
   [[1,1], [2,2], [3,3]],
   [[1,3], [2,2], [3,1]]
 ]
 
-diagonal_win2 = [
-  [[1,1], [1,1], [1,2]],
-  [:human, :human, :human]
-]
-
-#arr_test = [[1,3], [2,3], [3,3]]
-arr_test = [[:human, :human, :human]]
-
 def all_equal? arr
   arr.uniq.size == 1
 end
-#p all_equal?(arr_test)
 
 def line_win? board_arr
   board_arr.each do |line_sub_array|
@@ -109,19 +102,10 @@ def line_win? board_arr
   end
   false
 end
-# p line_win?(diagonal_win2)
+
 def winner?
   line_win?(HORIZONTAL_WIN) || line_win?(VERTICAL_WIN) || line_win?(DIAGONAL_WIN)
 end
-
-#p winner? horizontal_win, vertical_win, diagonal_win
-
-#p BOARD
-# p viable_moves
-# viable_moves.reject! do |sub_array|
-#   sub_array == [1,3]
-# end
-# p viable_moves
 
 def viable_move? viable_moves, move_to_check
   viable_moves.each do |sub_array|
@@ -130,39 +114,151 @@ def viable_move? viable_moves, move_to_check
   false
 end
 
-# p viable_moves
-
-def update_board! viable_moves, move_to_remove_array
-  p grid_item_to_alter = BOARD_COORDINATE_PLANE.index(move_to_remove_array)
+def update_board! viable_moves, move_to_remove_array, human_is_choosing
+  grid_item_to_alter = BOARD_COORDINATE_PLANE.index(move_to_remove_array)
   BOARD_DISPLAY_CURRENT.values.each do |rows|
     if rows.keys.include?(grid_item_to_alter)
-      rows[grid_item_to_alter] = PIECE_CURRENT
       rows["grid#{grid_item_to_alter}".to_sym] = "     "
+
+      human_is_choosing ? current_piece = PIECE_X : current_piece = PIECE_O
+      rows[grid_item_to_alter] = current_piece
+      if HORIZONTAL_WIN[0].find_index(move_to_remove_array)
+        HORIZONTAL_WIN[0][HORIZONTAL_WIN[0].find_index(move_to_remove_array)] = current_piece
+      elsif HORIZONTAL_WIN[1].find_index(move_to_remove_array)
+        HORIZONTAL_WIN[1][HORIZONTAL_WIN[1].find_index(move_to_remove_array)] = current_piece
+      elsif HORIZONTAL_WIN[2].find_index(move_to_remove_array)
+        HORIZONTAL_WIN[2][HORIZONTAL_WIN[2].find_index(move_to_remove_array)] = current_piece
+      end
+
+      if VERTICAL_WIN[0].find_index(move_to_remove_array)
+        VERTICAL_WIN[0][VERTICAL_WIN[0].find_index(move_to_remove_array)] = current_piece
+      elsif VERTICAL_WIN[1].find_index(move_to_remove_array)
+        VERTICAL_WIN[1][VERTICAL_WIN[1].find_index(move_to_remove_array)] = current_piece
+      elsif HORIZONTAL_WIN[2].find_index(move_to_remove_array)
+        VERTICAL_WIN[2][HORIZONTAL_WIN[2].find_index(move_to_remove_array)] = current_piece
+      end
+
+      if DIAGONAL_WIN[0].find_index(move_to_remove_array)
+        DIAGONAL_WIN[0][DIAGONAL_WIN[0].find_index(move_to_remove_array)] = current_piece
+      end
+      if DIAGONAL_WIN[1].find_index(move_to_remove_array)
+        DIAGONAL_WIN[1][DIAGONAL_WIN[1].find_index(move_to_remove_array)] = current_piece
+      end
     end
   end
   viable_moves.reject! do |sub_array|
     sub_array == move_to_remove_array
   end
-  # p move_to_remove_array.to_s
 end
-update_board! viable_moves, [2,3]
-p BOARD_COORDINATE_PLANE
-p viable_moves
-p winner?
 
-update_board! viable_moves, [1,3]
-p BOARD_COORDINATE_PLANE
-p viable_moves
-p winner?
+def prompt msg
+  puts ">> #{msg}"
+end
 
-update_board! viable_moves, [3,3]
-p BOARD_COORDINATE_PLANE
-p viable_moves
-p winner?
+def get_valid_moves
+  valid_moves = []
+
+  2.times do |i|
+    loop do
+      prompt i == 0 ? 'Enter "X" move "X" coordinate:' : 'Enter "X" move "Y" coordinate:'
+      raw_input = gets.chomp()
+      if is_int?(raw_input)
+        valid_moves << raw_input.to_i
+        break
+      end
+      prompt "You didn't enter a valid number"
+      prompt "Ty again!"
+      puts "-------"
+    end
+  end
+  valid_moves
+end
+
+def is_int? raw_input
+  raw_input_converted_to_int = raw_input.to_i
+  raw_input == raw_input_converted_to_int.to_s
+  raw_input == raw_input_converted_to_int.to_s
+end
+
+def get_human_move viable_moves
+  loop do
+    prompt "Human - What's your move:"
+    move_to_check = get_valid_moves()
+    viable_move = viable_move? viable_moves, move_to_check
+    return viable_move if viable_move
+    prompt "That move has already been taken, or is not a valid move"
+    prompt "Ty again!"
+    puts "-------"
+  end
+end
+
+def get_computer_move viable_moves
+  viable_moves.sample
+end
 
 def display_board
   BOARD_DISPLAY_CURRENT.values.each do |rows|
     puts rows.values.join
   end
 end
-display_board()
+
+def play_again?
+  loop do
+    prompt "Would you like to play again? [y/n]"
+    user_response = gets.chomp.downcase
+
+    case user_response
+    when "y"
+      prompt "working on it..."
+      return true
+    when "n"
+      prompt "Adios - Until We meet again"
+      return false
+    else
+    end
+    prompt "I didn't understand your response - please try again..."
+    puts "\n"
+  end
+end
+
+
+def my_app(human_is_choosing, viable_moves)
+  if human_is_choosing
+    puts "\n"
+    puts "Current Board State"
+    display_board()
+    puts "\n"
+  end
+
+  if viable_moves.length == 0
+    prompt "NO MOVES LEFT!!!!!!!!!!!!!! - TIE"
+    prompt "GOODBYE!"
+    # return unless play_again?
+    # my_app(!human_is_choosing, viable_moves)
+  end
+
+  move = human_is_choosing ? get_human_move(viable_moves) : get_computer_move(viable_moves)
+  update_board! viable_moves, move, human_is_choosing
+  # p BOARD_COORDINATE_PLANE
+  # p viable_moves
+
+  if winner?
+    puts "\n"
+    puts "Current Board State"
+    display_board()
+    puts "\n"
+
+    human_won = human_is_choosing ? true : false
+    prompt human_won ? "You won!!!!!!!!" : "Computer wins - you suck"
+    prompt "GOODBYE!"
+    # return unless play_again?
+    # puts "------"
+    # human_is_choosing = true
+    # viable_moves = BOARD_COORDINATE_PLANE.dup
+    # my_app(human_is_choosing, viable_moves)
+  else
+    my_app(!human_is_choosing, viable_moves)
+  end
+end
+
+my_app(human_is_choosing, viable_moves)
